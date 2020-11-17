@@ -9,16 +9,20 @@
 #define SOCKET_FAILURE 7
 #define BIND_FAILURE 8
 #define LISTEN_FAILURE 9
+#define ACCEPT_FAILURE 10
+const char* hello = "HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: 12\n\nHello world!";
 class HTTPD{
     private:
         int server_fd;
+        int new_socket;
+        int addr_len;
         struct sockaddr_in address;
         int createSocket();
         int bindSocket();
         int listenSocket();
+        void continuousServer();
     public:
         HTTPD(){
-
         };
         void init_server(unsigned short port);
 };
@@ -45,18 +49,43 @@ int HTTPD::listenSocket(){
     }
     return 0;
 }
+void HTTPD::continuousServer(){
+#ifdef DEBUG
+    std::cerr<<"Waiting for connection\n";
+#endif
+    while(1){
+        new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addr_len);
+        if (new_socket <0)
+        {
+            std::cerr<<"Failed to accept\n";
+            exit(ACCEPT_FAILURE);
+        }
+        char buf[30000]={0};
+        int ret;
+        ret=read(new_socket,buf,30000);
+#ifdef DEBUG
+        std::cerr<<buf<<'\n';
+#endif
+        write(new_socket , hello, strlen(hello));
+        close(new_socket);
+    }
+}
 void HTTPD::init_server(unsigned short port){
-    int addr_len = sizeof(address);
+    addr_len = sizeof(address);
     if(createSocket()!=0){
         return;
     }
+    std::cerr<<server_fd<<'\n';
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = port;
+    address.sin_port = htons(port);
+    memset(address.sin_zero, '\0', sizeof address.sin_zero);
     if(bindSocket()!=0){
         return;
     }
     if(listenSocket()!=0){
         return;
     }
+    continuousServer();
+    return;
 }
