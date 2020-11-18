@@ -6,6 +6,8 @@
 #include <cstdlib>
 #include <netinet/in.h>
 #include <iostream>
+#include "status.hpp"
+#include "handler.hpp"
 #define SOCKET_FAILURE 7
 #define BIND_FAILURE 8
 #define LISTEN_FAILURE 9
@@ -60,10 +62,11 @@ void HTTPD::continuousServer(){
             std::cerr<<"Failed to accept\n";
             exit(ACCEPT_FAILURE);
         }
-        char buf[30000]={0};
-        int ret;
-        ret=read(new_socket,buf,30000);
+        char buf[BUFSIZ*5]={0};
+        read(new_socket,buf,BUFSIZ*5);
+        std::string msg(buf);
 #ifdef DEBUG
+        std::cerr<<buf<<'\n';
         std::cerr<<buf<<'\n';
 #endif
         write(new_socket , hello, strlen(hello));
