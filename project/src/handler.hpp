@@ -2,8 +2,12 @@
 #include <unistd.h>
 class RequestHandler{
     private:
-            
+
     public:
         RequestHandler(){};
-        std::string HTTPRequest(std::string incoming);
+        int HTTPRequest(std::string incoming);
 };
+int RequestHandler::HTTPRequest(std::string incoming){
+    std::cerr<<incoming<<'\n';
+    return 0;
+}

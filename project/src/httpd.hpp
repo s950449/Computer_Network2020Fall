@@ -52,6 +52,7 @@ int HTTPD::listenSocket(){
     return 0;
 }
 void HTTPD::continuousServer(){
+        RequestHandler Incoming;
 #ifdef DEBUG
     std::cerr<<"Waiting for connection\n";
 #endif
@@ -65,8 +66,8 @@ void HTTPD::continuousServer(){
         char buf[BUFSIZ*5]={0};
         read(new_socket,buf,BUFSIZ*5);
         std::string msg(buf);
+        Incoming.HTTPRequest(msg);
 #ifdef DEBUG
-        std::cerr<<buf<<'\n';
         std::cerr<<buf<<'\n';
 #endif
         write(new_socket , hello, strlen(hello));
