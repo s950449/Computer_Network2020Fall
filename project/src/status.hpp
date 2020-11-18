@@ -1,6 +1,22 @@
-enum StatusCode{
-    OK,CREATED,NOT_FOUND,NO_CONTENT
+class HTTPSpec{
+    public:
+        HTTPSpec(){};
+        enum class Version{
+            HTTP1_0 = 10000,
+            HTTP1_1 = 10001,
+            HTTP1_2 = 10002
+        };
+        enum class StatusCode{
+            OK = 200,
+            CREATED = 201,
+            NO_CONTENT = 204,
+            NOT_FOUND = 404,
+            TEAPOT = 418
+        };
+        enum class Method{
+            GET,POST
+        };
+
 };
-enum Method{
-    GET,POST
-};
+
+

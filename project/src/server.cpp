@@ -1,10 +1,12 @@
 #include <iostream>
+#include <fstream>
 #include <sys/wait.h>
 #include "httpd.hpp"
 #include "signal.hpp"
 int main(int argc,char** argv){
     HTTPD server;
     signal(SIGINT,SignalHandler);
+    std::ifstream config_file("./config");
     pid_t PID;
     PID=fork();
     if(PID == 0){

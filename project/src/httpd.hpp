@@ -6,7 +6,6 @@
 #include <cstdlib>
 #include <netinet/in.h>
 #include <iostream>
-#include "status.hpp"
 #include "handler.hpp"
 #define SOCKET_FAILURE 7
 #define BIND_FAILURE 8
