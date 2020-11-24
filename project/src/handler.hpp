@@ -233,7 +233,7 @@ int RequestHandler::HTTPRequest(std::string incoming,int socketfd){
     std::cerr<<incoming<<'\n';
 #endif
     if(incoming.empty()){
-        return 0;
+        return -1;
     }
     response.clear();
     fd=socketfd;
@@ -242,21 +242,39 @@ int RequestHandler::HTTPRequest(std::string incoming,int socketfd){
     std::string HTTPVersion;
     std::vector <std::string> Header;
     Header = getSubtoken(incoming,'\n'); // strtok with newline
+    std::cerr<<"Get Header\n";
+    if(Header.empty()){
+        return -1;
+    }
     std::vector<std::string> Lines;
     Lines = getSubtoken(Header[0],' '); //strtok with space
+    std::cerr<<"Get Lines\n";
+    if(Lines.empty()){
+        return -1;
+    }
+    if(Lines.size()<3){
+        std::cerr<<"Incoming Size Not Valid\n";
+        return -1;
+    }
     HTTPMethod = Lines[0];
     TargetFile = Lines[1];
     HTTPVersion = Lines[2];
     get_http_method(HTTPMethod);
+    std::cerr<<"Get HTTP Method\n";
     get_http_version(HTTPVersion);
-    std::string target_dir;  
+    std::cerr<<"Get HTTP Version\n";
+    std::string target_dir; 
+    std::string rootdir_test(ROOTDIR);
+    rootdir_test+="/"; 
     int file_length = -1; 
     switch(http_method){
         case HTTPSpec::Method::GET:
             std::cerr<<"GET "<<Lines[1]<<'\n';
             target_dir = ROOTDIR + Lines[1];
             std::cerr<<target_dir<<'\n';
-
+            if(target_dir.compare(rootdir_test)==0){
+                target_dir = ROOTDIR + Lines[1] + "index.html";
+            }
             if(!checkPath(target_dir)){
                 std::cerr<<"Suspicious GET Request\n";
                 not_found();
