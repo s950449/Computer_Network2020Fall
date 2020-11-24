@@ -62,14 +62,13 @@ void HTTPD::continuousServer(){
             std::cerr<<"Failed to accept\n";
             exit(ACCEPT_FAILURE);
         }
-        char buf[BUFSIZ*5]={0};
-        read(new_socket,buf,BUFSIZ*5);
+        char buf[BUFFERSIZE]={0};
+        read(new_socket,buf,BUFFERSIZE);
         std::string msg(buf);
-        Incoming.HTTPRequest(msg);
+        Incoming.HTTPRequest(msg,new_socket);
 #ifdef DEBUG
         std::cerr<<buf<<'\n';
 #endif
-        write(new_socket , hello, strlen(hello));
         close(new_socket);
     }
 }
