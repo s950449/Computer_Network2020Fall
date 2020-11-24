@@ -98,9 +98,9 @@ int RequestHandler::FILE_IO(int socketfd){
         int length = myfile.tellg();
         myfile.seekg(0,myfile.beg);
         std::cerr<<"FILE_IO\n";
-        char buf[length];
+        char buf[BUFFERSIZE]={0};
         std::cerr<<length<<'\n';
-        myfile.read(buf,length);
+//        myfile.read(buf,length);
         ret = length;
         binToSocket(buf,socketfd,length);
         std::cerr<<"Bye\n";
@@ -188,13 +188,18 @@ int RequestHandler::binToSocket(char* buf,int socketfd,int bufL){
     int cnt=0;
 #ifndef Test
     while(cur < bufL){
+        memset(buf,0,BUFFERSIZE);
         if(bufL-cur < BUFFERSIZE){
+            myfile.read(buf,bufL-cur);
+            char tmp[bufL-cur];
+            memcpy(tmp,buf,bufL-cur);
             //cnt+=write(socketfd,buf+cur,bufL-cur);
-            cnt+=send(socketfd,buf,bufL,MSG_MORE);
+            cnt+=write(socketfd,tmp,bufL-cur);
         }
         else{
+            myfile.read(buf,BUFFERSIZE);
             //cnt+=write(socketfd,buf+cur,BUFFERSIZE);
-            cnt+=send(socketfd,buf,bufL,MSG_MORE);
+            cnt+=write(socketfd,buf,BUFFERSIZE);
         }
         cur+=BUFFERSIZE;
     }
@@ -212,9 +217,9 @@ int RequestHandler::strToSocket(std::string str,int socketfd){
     memset(writestr,0,sizeof(writestr));
     strcpy(writestr,str.c_str());
     int cur = 0;
-    while(cur<strL+1){
-        if(strL+1-cur < BUFFERSIZE){
-            write(socketfd,writestr+cur,strL+1-cur);
+    while(cur<strL){
+        if(strL-cur < BUFFERSIZE){
+            write(socketfd,writestr+cur,strL-cur);
         }
         else{
             write(socketfd,writestr+cur,BUFFERSIZE);
