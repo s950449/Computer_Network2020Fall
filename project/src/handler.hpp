@@ -126,6 +126,7 @@ void RequestHandler::not_found(){
     response +="404 NOT FOUND\r\n";
     response+=conlen;
     std::string html404;
+    chdir(workingdir.c_str());
     html404 = html404+ROOTDIR+"/404.html";
     int ret=FILE_O(html404);
     //responseS<<"HTTP/1.1 404 NOT FOUND\r\n"<<contype<<"\r\n"<<contype<<"text/html\r\n"<<conlen<<ret<<"\r\n";
@@ -244,16 +245,22 @@ int RequestHandler::HTTPRequest(std::string incoming,int socketfd){
     Header = getSubtoken(incoming,'\n'); // strtok with newline
     std::cerr<<"Get Header\n";
     if(Header.empty()){
+        http_method = HTTPSpec::Method::BAD_REQUEST;
+        http_version = HTTPSpec::Version::HTTP1_1;
         return -1;
     }
     std::vector<std::string> Lines;
     Lines = getSubtoken(Header[0],' '); //strtok with space
     std::cerr<<"Get Lines\n";
     if(Lines.empty()){
+        http_method = HTTPSpec::Method::BAD_REQUEST;
+        http_version = HTTPSpec::Version::HTTP1_1;
         return -1;
     }
-    if(Lines.size()<3){
+    if(Lines.size()<3){        
         std::cerr<<"Incoming Size Not Valid\n";
+        http_method = HTTPSpec::Method::BAD_REQUEST;
+        http_version = HTTPSpec::Version::HTTP1_1;
         return -1;
     }
     HTTPMethod = Lines[0];
@@ -304,6 +311,10 @@ int RequestHandler::HTTPRequest(std::string incoming,int socketfd){
             }
             break;
         case HTTPSpec::Method::POST:
+            break;
+        case HTTPSpec::Method::BAD_REQUEST:
+            response = response + "400 Bad Request\r\n";
+            strToSocket(response,socketfd);
             break;
         case HTTPSpec::Method::INVALID:
         default:
