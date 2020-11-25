@@ -102,7 +102,7 @@ void HTTPD::continuousServer(){
                         int read_from_client=read(new_socket,buf,BUFFERSIZE);
                         std::cerr<<"Read from client "<<read_from_client<<'\n';
                         if(read_from_client < 0){
-                            exit(READ_FAILURE);
+                            continue;
                         }
                         else if(read_from_client == 0){
                             std::cerr<<"Client disconnected\n";
