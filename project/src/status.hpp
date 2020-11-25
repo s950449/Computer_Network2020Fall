@@ -10,12 +10,13 @@ class HTTPSpec{
             OK = 200,
             CREATED = 201,
             NO_CONTENT = 204,
+            BAD_REQUEST = 400,
             NOT_FOUND = 404,
             METHOD_NOT_VALID = 405,
             I_M_A_TEAPOT = 418
         };
         enum class Method{
-            GET,POST,INVALID
+            GET,POST,INVALID,BAD_REQUEST
         };
 };
 
