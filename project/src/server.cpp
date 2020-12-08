@@ -8,7 +8,7 @@ int main(int argc,char** argv){
     signal(SIGINT,SignalHandler);
 #ifndef LOCAL
     std::string pub("/etc/letsencrypt/archive/sim2.csie.org/cert1.pem");
-    std::string pri("/etc/letsencrypt/archive/sim2.csie.org/privkey.pem");
+    std::string pri("/etc/letsencrypt/archive/sim2.csie.org/privkey1.pem");
 #else
     std::string pub("/tmp/ssl/cert.pem");
     std::string pri("/tmp/ssl/key.pem");   
