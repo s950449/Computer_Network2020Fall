@@ -12,7 +12,7 @@
 #endif
 extern char* rootdir;
 #define ROOTDIR "./var"
-#define BUFFERSIZE BUFSIZ
+#define BUFFERSIZE 512
 #define MAX_FILENAME 4096
 
 class RequestHandler{
@@ -22,6 +22,7 @@ class RequestHandler{
         const char* conlen="Content-Length: ";
         const char* contype="Content-Type: ";
         char *files;
+        SSL* ssl;
         std::vector<std::string> getSubtoken(std::string str,char dil);
         HTTPSpec::Method http_method;
         HTTPSpec::Version http_version;
@@ -50,7 +51,7 @@ class RequestHandler{
             workingdir+='/';
             workingdir+=ROOTDIR;
         };
-        int HTTPRequest(std::string incoming,int socketfd);
+        int HTTPRequest(std::string incoming,int socketfd,SSL* ssl_in);
 };
 void RequestHandler::FILE_C(){
     myfile.close();
@@ -126,7 +127,7 @@ void RequestHandler::not_found(){
     response +="404 NOT FOUND\r\n";
     response+=conlen;
     std::string html404;
-    chdir(workingdir.c_str());
+    //chdir(workingdir.c_str());
     html404 = html404+ROOTDIR+"/404.html";
     int ret=FILE_O(html404);
     //responseS<<"HTTP/1.1 404 NOT FOUND\r\n"<<contype<<"\r\n"<<contype<<"text/html\r\n"<<conlen<<ret<<"\r\n";
@@ -195,19 +196,31 @@ int RequestHandler::binToSocket(char* buf,int socketfd,int bufL){
             char tmp[bufL-cur];
             memcpy(tmp,buf,bufL-cur);
             //cnt+=write(socketfd,buf+cur,bufL-cur);
+    #ifndef SSL_ENABLE
             cnt+=write(socketfd,tmp,bufL-cur);
+    #else
+            cnt+=SSL_write(ssl,tmp,bufL-cur);
+    #endif
         }
         else{
             myfile.read(buf,BUFFERSIZE);
             //cnt+=write(socketfd,buf+cur,BUFFERSIZE);
+    #ifndef SSL_ENABLE
             cnt+=write(socketfd,buf,BUFFERSIZE);
+    #else
+            cnt+=SSL_write(ssl,buf,BUFFERSIZE);
+    #endif
         }
         cur+=BUFFERSIZE;
     }
     std::cerr<<"cnt "<<cnt<<'\n';
 #else
     std::cerr<<"BUFL "<<bufL<<'\n';
+    #ifndef SSL_ENABLE
     int ret=write(socketfd,buf,bufL);
+    #else
+    int ret=SSL_write(ssl,buf,bufL);
+    #endif
     std::cerr<<"RET"<<ret<<"\n";
 #endif
     return 0;
@@ -220,22 +233,31 @@ int RequestHandler::strToSocket(std::string str,int socketfd){
     int cur = 0;
     while(cur<strL){
         if(strL-cur < BUFFERSIZE){
+#ifndef SSL_ENABLE
             write(socketfd,writestr+cur,strL-cur);
+#else
+            SSL_write(ssl,writestr+cur,strL-cur);
+#endif
         }
         else{
+#ifndef SSL_ENABLE
             write(socketfd,writestr+cur,BUFFERSIZE);
+#else
+            SSL_write(ssl,writestr+cur,BUFFERSIZE);
+#endif
         }
         cur+=BUFFERSIZE;
     }
     return 0;
 }
-int RequestHandler::HTTPRequest(std::string incoming,int socketfd){
-#ifdef DEBUG
+int RequestHandler::HTTPRequest(std::string incoming,int socketfd,SSL* ssl_in){
+#ifdef VERBOSE
     std::cerr<<incoming<<'\n';
 #endif
     if(incoming.empty()){
         return -1;
     }
+    ssl=ssl_in;
     response.clear();
     fd=socketfd;
     std::string HTTPMethod;

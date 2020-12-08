@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <netinet/in.h>
 #include <iostream>
+#include "https.hpp"
 #include "handler.hpp"
 #define SOCKET_FAILURE 7
 #define BIND_FAILURE 8
@@ -26,11 +27,19 @@ class HTTPD{
         int bindSocket();
         int listenSocket();
         void continuousServer();
+        std::string pub;
+        std::string pri;
     public:
         HTTPD(){
         };
+        void init_key(std::string pubin,std::string priin);
         void init_server(unsigned short port);
 };
+void HTTPD::init_key(std::string pubin,std::string priin){
+    pub = pubin;
+    pri = priin;
+    return ;
+}
 int HTTPD::createSocket(){
     server_fd =  socket(AF_INET, SOCK_STREAM, 0);
     if(server_fd == 0){
@@ -55,6 +64,9 @@ int HTTPD::listenSocket(){
     return 0;
 }
 void HTTPD::continuousServer(){
+    SSL_CTX *ctx;
+    ctx = https_create_context();
+    https_configure_context(ctx,pub,pri);
         RequestHandler Incoming;
 #ifdef DEBUG
     std::cerr<<"Waiting for connection\n";
@@ -63,6 +75,7 @@ void HTTPD::continuousServer(){
     FD_SET(server_fd,&client_set);
     max_fd = server_fd;
     while(1){
+        SSL *ssl;
         int ret;
         struct timeval tv;
         fd_set read_fds;
@@ -88,9 +101,11 @@ void HTTPD::continuousServer(){
                         new_socket = accept(server_fd,(struct sockaddr *)&client_addr,(socklen_t*)&addr_len);
                         if(new_socket < 0){
                             std::cerr<<"Failed to accept\n";
-                            exit(ACCEPT_FAILURE);
+                            exit(ACCEPT_FAILURE);   
                         }
                         else{
+                            ssl = SSL_new(ctx);
+                            SSL_set_fd(ssl, new_socket);
                             FD_SET(new_socket,&client_set);
                             if(new_socket > max_fd){
                                 max_fd = new_socket;
@@ -99,7 +114,12 @@ void HTTPD::continuousServer(){
                     }
                     else{
                         char buf[BUFFERSIZE]={0};
+#ifndef SSL_ENABLE                        
                         int read_from_client=read(new_socket,buf,BUFFERSIZE);
+#else
+                        std::string ssl_msg=https_serve(ssl);
+                        int read_from_client = ssl_msg.length();
+#endif
                         std::cerr<<"Read from client "<<read_from_client<<'\n';
                         if(read_from_client < 0){
                             continue;
@@ -108,12 +128,21 @@ void HTTPD::continuousServer(){
                             std::cerr<<"Client disconnected\n";
                         }
                         else{
+#ifndef SSL_ENABLE
                         std::string msg(buf);
-                        Incoming.HTTPRequest(msg,new_socket);
+#else
+                        std::string msg = ssl_msg;
+#endif
+                        std::cerr<<msg<<'\n';
+                        std::cerr<<"Before call handler\n";
+                        Incoming.HTTPRequest(msg,new_socket,ssl);
 #ifdef DEBUG
                         std::cerr<<buf<<'\n';
 #endif
                         }
+                        SSL_shutdown(ssl);
+                        SSL_free(ssl);
+
                         close(i);
                         FD_CLR(i,&client_set);
                     }
@@ -139,6 +168,7 @@ void HTTPD::init_server(unsigned short port){
     if(listenSocket()!=0){
         return;
     }
+    https_init();
     continuousServer();
     return;
 }
