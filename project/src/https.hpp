@@ -58,6 +58,10 @@ std::string https_serve(SSL* ssl){
     }
     else{
         read_from_client = SSL_read(ssl,buf,sizeof(buf));
+        if(read_from_client<=0){
+            std::string ssl_err_msg("SSL_read_failed\n");
+            return ssl_err_msg;
+        }
         std::string msg(buf);
         return msg;
     }
