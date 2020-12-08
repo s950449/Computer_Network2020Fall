@@ -133,8 +133,6 @@ void HTTPD::continuousServer(){
 #else
                         std::string msg = ssl_msg;
 #endif
-                        std::cerr<<msg<<'\n';
-                        std::cerr<<"Before call handler\n";
                         Incoming.HTTPRequest(msg,new_socket,ssl);
 #ifdef DEBUG
                         std::cerr<<buf<<'\n';

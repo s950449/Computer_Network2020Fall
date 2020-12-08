@@ -251,9 +251,6 @@ int RequestHandler::strToSocket(std::string str,int socketfd){
     return 0;
 }
 int RequestHandler::HTTPRequest(std::string incoming,int socketfd,SSL* ssl_in){
-#ifdef VERBOSE
-    std::cerr<<incoming<<'\n';
-#endif
     if(incoming.empty()){
         return -1;
     }
@@ -296,6 +293,9 @@ int RequestHandler::HTTPRequest(std::string incoming,int socketfd,SSL* ssl_in){
     std::string rootdir_test(ROOTDIR);
     rootdir_test+="/"; 
     int file_length = -1; 
+#ifdef VERBOSE
+    std::cerr<<incoming<<'\n';
+#endif
     switch(http_method){
         case HTTPSpec::Method::GET:
             std::cerr<<"GET "<<Lines[1]<<'\n';
