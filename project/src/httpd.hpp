@@ -118,6 +118,9 @@ void HTTPD::continuousServer(){
                         int read_from_client=read(new_socket,buf,BUFFERSIZE);
 #else
                         std::string ssl_msg=https_serve(ssl);
+                        while(SSL_pending(ssl)>0){
+                            ssl_msg+=https_serve(ssl);
+                        }
                         int read_from_client = ssl_msg.length();
 #endif
                         std::cerr<<"Read from client "<<read_from_client<<'\n';
@@ -143,6 +146,7 @@ void HTTPD::continuousServer(){
 
                         close(i);
                         FD_CLR(i,&client_set);
+
                     }
                 }
             }
