@@ -167,6 +167,10 @@ void HTTPD::init_server(unsigned short port){
     if(listenSocket()!=0){
         return;
     }
+    struct timeval tv;
+    tv.tv_sec=10;
+    tv.tv_usec=0;
+    setsockopt(server_fd,SOL_SOCKET,SO_SNDTIMEO | SO_RCVTIMEO,(char*)&tv,sizeof(struct timeval));
     https_init();
     continuousServer();
     return;
