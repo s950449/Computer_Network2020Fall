@@ -133,14 +133,17 @@ void HTTPD::continuousServer(){
 #else
                         std::string msg = ssl_msg;
 #endif
-                        Incoming.HTTPRequest(msg,new_socket,ssl);
+                        int status=Incoming.HTTPRequest(msg,new_socket,ssl);
+#ifdef SSL_ENABLE
+                        if(status == -1){
+
+                        }
+#endif
 #ifdef DEBUG
                         std::cerr<<buf<<'\n';
 #endif
                         }
-                        SSL_shutdown(ssl);
-                        SSL_free(ssl);
-
+                        SSL_clear(ssl);
                         close(i);
                         FD_CLR(i,&client_set);
 
