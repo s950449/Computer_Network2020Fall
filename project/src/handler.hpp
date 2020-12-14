@@ -199,7 +199,7 @@ int RequestHandler::binToSocket(char* buf,int socketfd,int bufL){
     #ifndef SSL_ENABLE
             cnt+=write(socketfd,tmp,bufL-cur);
     #else
-            cnt+=SSL_write(ssl,tmp,bufL-cur);
+            cnt+=https_write(ssl,tmp,bufL-cur);
     #endif
         }
         else{
@@ -208,7 +208,7 @@ int RequestHandler::binToSocket(char* buf,int socketfd,int bufL){
     #ifndef SSL_ENABLE
             cnt+=write(socketfd,buf,BUFFERSIZE);
     #else
-            cnt+=SSL_write(ssl,buf,BUFFERSIZE);
+            cnt+=https_write(ssl,buf,BUFFERSIZE);
     #endif
         }
         cur+=BUFFERSIZE;
@@ -236,14 +236,14 @@ int RequestHandler::strToSocket(std::string str,int socketfd){
 #ifndef SSL_ENABLE
             write(socketfd,writestr+cur,strL-cur);
 #else
-            SSL_write(ssl,writestr+cur,strL-cur);
+            https_write(ssl,writestr+cur,strL-cur);
 #endif
         }
         else{
 #ifndef SSL_ENABLE
             write(socketfd,writestr+cur,BUFFERSIZE);
 #else
-            SSL_write(ssl,writestr+cur,BUFFERSIZE);
+            https_write(ssl,writestr+cur,BUFFERSIZE);
 #endif
         }
         cur+=BUFFERSIZE;

@@ -41,12 +41,43 @@ SSL_CTX* https_create_context()
     method = TLS_method();
     ctx = SSL_CTX_new(method);
     SSL_CTX_set_min_proto_version(ctx,TLS1_2_VERSION);
+    SSL_CTX_set_mode(ctx,SSL_MODE_AUTO_RETRY);
     if (!ctx) {
 	perror("Unable to create SSL context");
 	ERR_print_errors_fp(stderr);
 	exit(SSL_EXIT_FAILURE);
     }
     return ctx;
+}
+std::string https_read(SSL* ssl){
+
+    char buf[1024]={0};
+    int ret=SSL_read(ssl,buf,sizeof(buf));
+    if(ret<=0){
+        if(SSL_get_error(ssl,ret)==SSL_ERROR_WANT_READ){
+            sleep(1);
+            std::string msg;
+            msg+=https_read(ssl);
+            return msg;
+        }
+        else{
+                std::string ssl_err_msg("SSL_read_failed\n");
+                return ssl_err_msg;
+        }
+    }
+    std::string msg(buf);
+    return msg;
+}
+int https_write(SSL* ssl,char* str,int length){
+    int ret=SSL_write(ssl,str,length);
+    if(SSL_get_error(ssl,ret)==SSL_ERROR_WANT_WRITE){
+        sleep(1);
+        ret+=https_write(ssl,str,length);
+        return ret;
+    }
+    else{
+        return ret;
+    }
 }
 std::string https_serve(SSL* ssl){
     int read_from_client=0;
@@ -57,12 +88,6 @@ std::string https_serve(SSL* ssl){
         return ssl_err_msg;
     }
     else{
-        read_from_client = SSL_read(ssl,buf,sizeof(buf));
-        if(read_from_client<=0){
-            std::string ssl_err_msg("SSL_read_failed\n");
-            return ssl_err_msg;
-        }
-        std::string msg(buf);
-        return msg;
+        return https_read(ssl);
     }
 }
