@@ -143,7 +143,7 @@ void HTTPD::continuousServer(){
                         std::cerr<<buf<<'\n';
 #endif
                         }
-                        SSL_clear(ssl);
+                        SSL_free(ssl);
                         close(i);
                         FD_CLR(i,&client_set);
 
