@@ -82,7 +82,14 @@ int https_write(SSL* ssl,char* str,int length){
 std::string https_serve(SSL* ssl){
     int read_from_client=0;
     char buf[1024]={0};
-    if(SSL_accept(ssl)==-1){
+    int ret=SSL_accept(ssl);
+    if(ret==-1){
+        switch(SSL_get_error(ssl,ret)){
+            case SSL_ERROR_WANT_READ:
+                return https_serve(ssl);
+            default:
+                break;
+        }
         std::string ssl_err_msg("SSL_accept_failed\n");
         std::cerr<<ssl_err_msg;
         return ssl_err_msg;
