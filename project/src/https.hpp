@@ -8,17 +8,29 @@
 #include <openssl/err.h>
 #include <netdb.h>
 #define SSL_EXIT_FAILURE -2
-void https_init(){
+class HTTPS{
+    private:
+        void https_cleanup();
+        void https_configure_context(SSL_CTX *ctx,std::string pub,std::string priv);
+        SSL_CTX* https_create_context();
+    public:
+        HTTPS(){};
+        void https_init();
+        std::string https_serve(SSL* ssl);
+        std::string https_read(SSL* ssl);
+        int https_write(SSL* ssl,char* str,int length);        
+};
+void HTTPS::https_init(){
     SSL_library_init();
     SSL_load_error_strings();	
     OpenSSL_add_ssl_algorithms();
     return;
 }
-void https_cleanup(){
+void HTTPS::https_cleanup(){
     EVP_cleanup();
     return;
 }
-void https_configure_context(SSL_CTX *ctx,std::string pub,std::string priv)
+void HTTPS::https_configure_context(SSL_CTX *ctx,std::string pub,std::string priv)
 {
     SSL_CTX_set_ecdh_auto(ctx, 1);
 
@@ -33,7 +45,7 @@ void https_configure_context(SSL_CTX *ctx,std::string pub,std::string priv)
 	exit(SSL_EXIT_FAILURE);
     }
 }
-SSL_CTX* https_create_context()
+SSL_CTX* HTTPS::https_create_context()
 {
     const SSL_METHOD *method;
     SSL_CTX *ctx;
@@ -49,7 +61,7 @@ SSL_CTX* https_create_context()
     }
     return ctx;
 }
-std::string https_read(SSL* ssl){
+std::string HTTPS::https_read(SSL* ssl){
 
     char buf[1024]={0};
     int ret=SSL_read(ssl,buf,sizeof(buf));
@@ -68,7 +80,7 @@ std::string https_read(SSL* ssl){
     std::string msg(buf);
     return msg;
 }
-int https_write(SSL* ssl,char* str,int length){
+int HTTPS::https_write(SSL* ssl,char* str,int length){
     int ret=SSL_write(ssl,str,length);
     if(SSL_get_error(ssl,ret)==SSL_ERROR_WANT_WRITE){
         sleep(1);
@@ -79,7 +91,7 @@ int https_write(SSL* ssl,char* str,int length){
         return ret;
     }
 }
-std::string https_serve(SSL* ssl){
+std::string HTTPS::https_serve(SSL* ssl){
     int read_from_client=0;
     char buf[1024]={0};
     int ret=SSL_accept(ssl);
