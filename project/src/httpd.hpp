@@ -6,7 +6,6 @@
 #include <cstdlib>
 #include <netinet/in.h>
 #include <iostream>
-#include "https.hpp"
 #include "handler.hpp"
 #define SOCKET_FAILURE 7
 #define BIND_FAILURE 8
@@ -23,50 +22,17 @@ class HTTPD{
         int max_fd;
         fd_set client_set;
         struct sockaddr_in address;
-        int createSocket();
-        int bindSocket();
-        int listenSocket();
         void continuousServer();
-        std::string pub;
-        std::string pri;
     public:
         HTTPD(){
         };
-        void init_key(std::string pubin,std::string priin);
-        void init_server(unsigned short port);
+        ~HTTPD(){
+        }
+        int http_init(int fd);
+
 };
-void HTTPD::init_key(std::string pubin,std::string priin){
-    pub = pubin;
-    pri = priin;
-    return ;
-}
-int HTTPD::createSocket(){
-    server_fd =  socket(AF_INET, SOCK_STREAM, 0);
-    if(server_fd == 0){
-        std::cerr<<"Failed to create socket\n";
-        exit(SOCKET_FAILURE);
-    }
-    return 0;    
-}
-int HTTPD::bindSocket(){
-    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address))<0)
-    {
-        std::cerr<<"Failed to bind\n";
-        exit(BIND_FAILURE);
-    }     
-    return 0;
-}
-int HTTPD::listenSocket(){
-    if(listen(server_fd,10) < 0){
-        std::cerr<<"Failed to listen\n";
-        exit(LISTEN_FAILURE);
-    }
-    return 0;
-}
+
 void HTTPD::continuousServer(){
-    SSL_CTX *ctx;
-    ctx = https_create_context();
-    https_configure_context(ctx,pub,pri);
         RequestHandler Incoming;
 #ifdef DEBUG
     std::cerr<<"Waiting for connection\n";
@@ -75,7 +41,6 @@ void HTTPD::continuousServer(){
     FD_SET(server_fd,&client_set);
     max_fd = server_fd;
     while(1){
-        SSL *ssl;
         int ret;
         struct timeval tv;
         fd_set read_fds;
@@ -104,8 +69,6 @@ void HTTPD::continuousServer(){
                             exit(ACCEPT_FAILURE);   
                         }
                         else{
-                            ssl = SSL_new(ctx);
-                            SSL_set_fd(ssl, new_socket);
                             FD_SET(new_socket,&client_set);
                             if(new_socket > max_fd){
                                 max_fd = new_socket;
@@ -113,13 +76,8 @@ void HTTPD::continuousServer(){
                         }
                     }
                     else{
-                        char buf[BUFFERSIZE]={0};
-#ifndef SSL_ENABLE                        
+                        char buf[BUFFERSIZE]={0};                       
                         int read_from_client=read(new_socket,buf,BUFFERSIZE);
-#else
-                        std::string ssl_msg=https_serve(ssl);
-                        int read_from_client = ssl_msg.length();
-#endif
                         std::cerr<<"Read from client "<<read_from_client<<'\n';
                         if(read_from_client < 0){
                             continue;
@@ -128,22 +86,13 @@ void HTTPD::continuousServer(){
                             std::cerr<<"Client disconnected\n";
                         }
                         else{
-#ifndef SSL_ENABLE
                         std::string msg(buf);
-#else
-                        std::string msg = ssl_msg;
-#endif
-                        int status=Incoming.HTTPRequest(msg,new_socket,ssl);
-#ifdef SSL_ENABLE
-                        if(status == -1){
 
-                        }
-#endif
+                        int status=Incoming.HTTPRequest(msg,new_socket);
 #ifdef DEBUG
                         std::cerr<<buf<<'\n';
 #endif
                         }
-                        SSL_free(ssl);
                         close(i);
                         FD_CLR(i,&client_set);
 
@@ -154,27 +103,9 @@ void HTTPD::continuousServer(){
         continue;
     }
 }
-void HTTPD::init_server(unsigned short port){
-    addr_len = sizeof(address);
-    if(createSocket()!=0){
-        return;
-    }
+int HTTPD::http_init(int fd){
+    server_fd = fd;
     std::cerr<<server_fd<<'\n';
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(port);
-    memset(address.sin_zero, '\0', sizeof address.sin_zero);
-    if(bindSocket()!=0){
-        return;
-    }
-    if(listenSocket()!=0){
-        return;
-    }
-    struct timeval tv;
-    tv.tv_sec=10;
-    tv.tv_usec=0;
-    setsockopt(server_fd,SOL_SOCKET,SO_SNDTIMEO | SO_RCVTIMEO,(char*)&tv,sizeof(struct timeval));
-    https_init();
     continuousServer();
-    return;
+    return 0;
 }

@@ -13,12 +13,15 @@ class HTTPS{
         void https_cleanup();
         void https_configure_context(SSL_CTX *ctx,std::string pub,std::string priv);
         SSL_CTX* https_create_context();
+        std::string pub;
+        std::string pri;
     public:
         HTTPS(){};
         void https_init();
         std::string https_serve(SSL* ssl);
         std::string https_read(SSL* ssl);
-        int https_write(SSL* ssl,char* str,int length);        
+        int https_write(SSL* ssl,char* str,int length);    
+        void init_key(std::string pubin,std::string priin);
 };
 void HTTPS::https_init(){
     SSL_library_init();
@@ -29,6 +32,11 @@ void HTTPS::https_init(){
 void HTTPS::https_cleanup(){
     EVP_cleanup();
     return;
+}
+void HTTPS::init_key(std::string pubin,std::string priin){
+    pub = pubin;
+    pri = priin;
+    return ;
 }
 void HTTPS::https_configure_context(SSL_CTX *ctx,std::string pub,std::string priv)
 {

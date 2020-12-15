@@ -51,7 +51,7 @@ class RequestHandler{
             workingdir+='/';
             workingdir+=ROOTDIR;
         };
-        int HTTPRequest(std::string incoming,int socketfd,SSL* ssl_in);
+        int HTTPRequest(std::string incoming,int socketfd);
 };
 void RequestHandler::FILE_C(){
     myfile.close();
@@ -195,32 +195,19 @@ int RequestHandler::binToSocket(char* buf,int socketfd,int bufL){
             myfile.read(buf,bufL-cur);
             char tmp[bufL-cur];
             memcpy(tmp,buf,bufL-cur);
-            //cnt+=write(socketfd,buf+cur,bufL-cur);
-    #ifndef SSL_ENABLE
             cnt+=write(socketfd,tmp,bufL-cur);
-    #else
-            cnt+=https_write(ssl,tmp,bufL-cur);
-    #endif
         }
         else{
             myfile.read(buf,BUFFERSIZE);
             //cnt+=write(socketfd,buf+cur,BUFFERSIZE);
-    #ifndef SSL_ENABLE
             cnt+=write(socketfd,buf,BUFFERSIZE);
-    #else
-            cnt+=https_write(ssl,buf,BUFFERSIZE);
-    #endif
         }
         cur+=BUFFERSIZE;
     }
     std::cerr<<"cnt "<<cnt<<'\n';
 #else
     std::cerr<<"BUFL "<<bufL<<'\n';
-    #ifndef SSL_ENABLE
     int ret=write(socketfd,buf,bufL);
-    #else
-    int ret=SSL_write(ssl,buf,bufL);
-    #endif
     std::cerr<<"RET"<<ret<<"\n";
 #endif
     return 0;
@@ -233,28 +220,19 @@ int RequestHandler::strToSocket(std::string str,int socketfd){
     int cur = 0;
     while(cur<strL){
         if(strL-cur < BUFFERSIZE){
-#ifndef SSL_ENABLE
             write(socketfd,writestr+cur,strL-cur);
-#else
-            https_write(ssl,writestr+cur,strL-cur);
-#endif
         }
         else{
-#ifndef SSL_ENABLE
             write(socketfd,writestr+cur,BUFFERSIZE);
-#else
-            https_write(ssl,writestr+cur,BUFFERSIZE);
-#endif
         }
         cur+=BUFFERSIZE;
     }
     return 0;
 }
-int RequestHandler::HTTPRequest(std::string incoming,int socketfd,SSL* ssl_in){
+int RequestHandler::HTTPRequest(std::string incoming,int socketfd){
     if(incoming.empty()){
         return -1;
     }
-    ssl=ssl_in;
     response.clear();
     fd=socketfd;
     std::string HTTPMethod;
