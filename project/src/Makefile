@@ -1,5 +1,5 @@
 CC=clang++
-CFLAGS=-Wall -std=c++17 -O2 -L/usr/lib -lmagic -lssl -lcrypto
+CFLAGS=-Wall -std=c++17 -O2 -L/usr/lib -lmagic -lssl -lcrypto -lcurl -lsqlite3
 REGEX=-DRegex
 DEBUG=-DDEBUG -g
 SSL=-DSSL_ENABLE
@@ -11,7 +11,7 @@ server: server.o
 debug: server.o
 	$(CC) server.cpp $(CFLAGS) $(DEBUG) -o server.o
 testing: server.o
-	$(CC) server.cpp  $(CFLAGS) $(REGEX) $(TESTING) -o server.o		
+	$(CC) server.cpp login.cpp  $(CFLAGS) $(REGEX) $(TESTING) -o server.o		
 ssl: server.o
 	$(CC) server.cpp  $(CFLAGS) $(REGEX) $(TESTING) $(SSL) -o server.o	
 clean:

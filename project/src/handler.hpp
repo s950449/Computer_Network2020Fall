@@ -7,12 +7,16 @@
 #include <fcntl.h>
 #include "status.hpp"
 #include <magic.h>
+#include <openssl/sha.h>
+#include <curl/curl.h>
+#include "mysha.hpp"
+#include "login.hpp"
 #ifdef Regex
 #include <regex>
 #endif
 extern char* rootdir;
 #define ROOTDIR "./var"
-#define BUFFERSIZE 512
+#define BUFFERSIZE 1024
 #define MAX_FILENAME 4096
 
 class RequestHandler{
@@ -43,6 +47,9 @@ class RequestHandler{
         std::ifstream myfile;
         int binToSocket(char* buf,int socketfd,int bufL);
         int strToSocket(std::string str,int socketfd);
+        std::string curlDecoding(std::string str);
+        int LoginHandler(std::string str);
+        int RegisterHandler(std::string str);
     public:
         RequestHandler(){
             char working_dir_buf[MAX_FILENAME]={0};
@@ -229,6 +236,68 @@ int RequestHandler::strToSocket(std::string str,int socketfd){
     }
     return 0;
 }
+std::string RequestHandler::curlDecoding(std::string str){
+    CURL *curl=curl_easy_init();
+    if(curl){
+        char *tmp = curl_easy_escape(curl,str.c_str(),str.length());
+        if(tmp){
+            std::string ret(tmp);
+            curl_free(tmp);
+            return ret;
+        }
+    }
+    std::string error_msg="ERROR\n";
+    return error_msg;
+}
+
+int RequestHandler::LoginHandler(std::string str){
+    std::vector<std::string> Lines;
+    std::cerr<<"In Login Handler\n";
+    Lines = getSubtoken(str,'&');
+#ifdef Debug
+    for(int i = 0;i < Lines.size();i++){
+        std::cerr<<Lines[i]<<'\n';
+    }
+#endif
+    std::vector<std::string> tmp;
+    tmp=getSubtoken(Lines[0],'=');
+    std::string username = tmp[1];
+    tmp=getSubtoken(Lines[1],'=');
+    std::string pw = tmp[1];
+    LoginSystem Test;
+    Test.Login(username,pw);
+    return 0;
+}
+int RequestHandler::RegisterHandler(std::string str){
+    std::vector<std::string> Lines;
+    std::cerr<<"In Register Handler\n";
+    Lines = getSubtoken(str,'&');
+    std::vector<std::string> tmp;
+    tmp=getSubtoken(Lines[0],'=');
+    std::string username = tmp[1];
+    tmp=getSubtoken(Lines[1],'=');
+    std::string pw = tmp[1];
+    tmp=getSubtoken(Lines[2],'=');
+    std::string pwr = tmp[1];
+    unsigned char pw_hash[256],pwr_hash[256];
+    unsigned char tmp_hash[256]={};
+    std::copy(pw.begin(),pw.end(),tmp_hash);
+    tmp_hash[pw.length()]=0;
+    SHA256(tmp_hash,pw.length(),pw_hash);
+    memset(tmp_hash,0,sizeof(tmp_hash));
+    std::copy(pwr.begin(),pwr.end(),tmp_hash);
+    tmp_hash[pwr.length()]=0;    
+    SHA256(tmp_hash,pwr.length(),pwr_hash);
+
+    std::cerr<<pw_hash<<" "<<pwr_hash<<'\n';
+#ifdef Debug
+    for(int i = 0;i < Lines.size();i++){
+        std::cerr<<Lines[i]<<'\n';
+    }
+#endif
+    return 0;    
+}
+
 int RequestHandler::HTTPRequest(std::string incoming,int socketfd){
     if(incoming.empty()){
         return -1;
@@ -311,6 +380,15 @@ int RequestHandler::HTTPRequest(std::string incoming,int socketfd){
             }
             break;
         case HTTPSpec::Method::POST:
+            std::cerr<<HTTPMethod<<' '<<TargetFile<<' '<<HTTPVersion<<'\n';
+            std::cerr<<curlDecoding(Header[Header.size()-1])<<'\n';
+            if(TargetFile=="/login.html"){
+                LoginHandler(Header[Header.size()-1]);
+            }
+            else if(TargetFile == "/register.html"){
+                RegisterHandler(Header[Header.size()-1]);
+            }
+
             break;
         case HTTPSpec::Method::BAD_REQUEST:
             response = response + "400 Bad Request\r\n";

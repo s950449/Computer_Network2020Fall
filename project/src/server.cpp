@@ -16,7 +16,10 @@ int main(int argc,char** argv){
     server.pass_key(pub,pri);
     std::ifstream config_file("./config"); // No op now
     SOCKETD::server type;
-    if(strcmp(argv[2],"http")==0){
+    if(argv[2] == NULL){
+        type = SOCKETD::server::OTHER;
+    }
+    else if(strcmp(argv[2],"http")==0){
         type = SOCKETD::server::HTTP;
     }
     else if(strcmp(argv[2],"https") == 0){
