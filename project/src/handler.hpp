@@ -319,6 +319,18 @@ int RequestHandler::msgHandler(std::string str){
         if(sqlite3_step(stmt) == SQLITE_DONE){
             sqlite3_finalize(stmt);
             std::cerr<<"Message success\n";
+            std::stringstream retmsg;
+            retmsg<<"<!DOCTYPE HTML>";
+            retmsg<<"<html lang=\"en\">";
+            retmsg<<"<head>";
+            retmsg<<"<title>留言成功</title>";
+            retmsg<<"<meta charset=\"UTF-8\">";
+            retmsg<<"</head>";
+            retmsg<<"<body>";
+            retmsg<<"<h1>Success</h1>";
+            retmsg<<"</body>";
+            retmsg<<"</html>";
+            showMsgHandler(retmsg.str());            
             return 0;
         }
         else{
