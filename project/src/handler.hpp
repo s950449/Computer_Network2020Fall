@@ -50,6 +50,7 @@ class RequestHandler{
         std::string curlDecoding(std::string str);
         int LoginHandler(std::string str);
         int RegisterHandler(std::string str);
+        std::string SetCookie(std::string username);
     public:
         RequestHandler(){
             char working_dir_buf[MAX_FILENAME]={0};
@@ -63,6 +64,11 @@ class RequestHandler{
 void RequestHandler::FILE_C(){
     myfile.close();
     return;
+}
+std::string RequestHandler::SetCookie(std::string username){
+    std::string ret("Set-Cookie: ");
+    ret+="username="+username;
+    return ret;
 }
 bool RequestHandler::checkPath(std::string filepath){
 #ifndef Regex
@@ -265,8 +271,14 @@ int RequestHandler::LoginHandler(std::string str){
     tmp=getSubtoken(Lines[1],'=');
     std::string pw = tmp[1];
     LoginSystem Test;
-    Test.Login(username,pw);
-    return 0;
+    int status=Test.Login(username,pw);
+    if(status == LOGIN_FAILURE){
+        return 1;
+    }
+    else if(status == 0){
+        return 0;
+    }
+    return 1;
 }
 int RequestHandler::RegisterHandler(std::string str){
     std::vector<std::string> Lines;
@@ -290,6 +302,20 @@ int RequestHandler::RegisterHandler(std::string str){
     SHA256(tmp_hash,pwr.length(),pwr_hash);
 
     std::cerr<<pw_hash<<" "<<pwr_hash<<'\n';
+    if(pw != pwr){
+        return 3;
+    }
+    LoginSystem Test;
+    int status = Test.Register(username,pw);
+    if(status == ACC_EXIST){
+        return 3;
+    }
+    else if(status == 0){
+        return 0;
+    }
+    else{
+        return 1;
+    }
 #ifdef Debug
     for(int i = 0;i < Lines.size();i++){
         std::cerr<<Lines[i]<<'\n';
@@ -340,6 +366,7 @@ int RequestHandler::HTTPRequest(std::string incoming,int socketfd){
     std::string rootdir_test(ROOTDIR);
     rootdir_test+="/"; 
     int file_length = -1; 
+    int status=-1;
 #ifdef VERBOSE
     std::cerr<<incoming<<'\n';
 #endif
@@ -382,11 +409,46 @@ int RequestHandler::HTTPRequest(std::string incoming,int socketfd){
         case HTTPSpec::Method::POST:
             std::cerr<<HTTPMethod<<' '<<TargetFile<<' '<<HTTPVersion<<'\n';
             std::cerr<<curlDecoding(Header[Header.size()-1])<<'\n';
+
             if(TargetFile=="/login.html"){
-                LoginHandler(Header[Header.size()-1]);
+                status=LoginHandler(Header[Header.size()-1]);
+                if(status == 0){
+                    std::vector<std::string>tmp_user,tmp_str;
+                    tmp_str=getSubtoken(Header[Header.size()-1],'&');
+                    tmp_user=getSubtoken(tmp_str[0],'=');
+                    response +="HTTP/1.1 ";
+                    response +="302 Found\r\n";
+                    response+="Location: /index.html\r\n";
+                    response=response+SetCookie(tmp_user[1])+"\r\n";
+                    strToSocket(response,socketfd);
+                    FILE_IO(socketfd);
+                    FILE_C();                    
+                }
+                else{
+                    response+="HTTP/1.1 ";
+                    response+="403 Forbidden\r\n";
+                    strToSocket(response,socketfd);                  
+                }
             }
             else if(TargetFile == "/register.html"){
-                RegisterHandler(Header[Header.size()-1]);
+                status=RegisterHandler(Header[Header.size()-1]);
+                if(status == 3 || status == 1){
+                    //Password Repeat Error
+                    response+="HTTP/1.1 ";
+                    response+="403 Forbidden\r\n";
+                    strToSocket(response,socketfd);
+                }
+                else if(status == 0){
+                    std::vector<std::string>tmp_user,tmp_str;
+                    tmp_str=getSubtoken(Header[Header.size()-1],'&');
+                    tmp_user=getSubtoken(tmp_str[0],'=');
+                    response +="HTTP/1.1 ";
+                    response +="302 Found\r\n";
+                    response+="Location: /register_success.html\r\n";
+                    strToSocket(response,socketfd);
+                    FILE_IO(socketfd);
+                    FILE_C();                       
+                }
             }
 
             break;
