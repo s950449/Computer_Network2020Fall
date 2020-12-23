@@ -11,17 +11,19 @@
 #include <curl/curl.h>
 #include "mysha.hpp"
 #include "login.hpp"
+#include <sys/time.h>
 #ifdef Regex
 #include <regex>
 #endif
 extern char* rootdir;
 #define ROOTDIR "./var"
-#define BUFFERSIZE 1024
+#define BUFFERSIZE 16384
 #define MAX_FILENAME 4096
 
 class RequestHandler{
     private:
         std::string workingdir;
+        int msgfd;
         int fd;
         const char* conlen="Content-Length: ";
         const char* contype="Content-Type: ";
@@ -48,8 +50,11 @@ class RequestHandler{
         int binToSocket(char* buf,int socketfd,int bufL);
         int strToSocket(std::string str,int socketfd);
         std::string curlDecoding(std::string str);
+        std::string curlEncoding(const char* str);
         int LoginHandler(std::string str);
         int RegisterHandler(std::string str);
+        int msgHandler(std::string str);
+        int showMsgHandler(std::string str);
         std::string SetCookie(std::string username);
     public:
         RequestHandler(){
@@ -242,6 +247,19 @@ int RequestHandler::strToSocket(std::string str,int socketfd){
     }
     return 0;
 }
+std::string RequestHandler::curlEncoding(const char* str){
+    CURL *curl = curl_easy_init();
+    if(curl){
+        char *tmp = curl_easy_unescape(curl,str,strlen(str),NULL);
+        if(tmp){
+            std::string ret(tmp);
+            curl_free(tmp);
+            return ret;
+        }
+    }
+    std::string error_msg="ERROR\n";
+    return error_msg;    
+}
 std::string RequestHandler::curlDecoding(std::string str){
     CURL *curl=curl_easy_init();
     if(curl){
@@ -254,6 +272,94 @@ std::string RequestHandler::curlDecoding(std::string str){
     }
     std::string error_msg="ERROR\n";
     return error_msg;
+}
+int RequestHandler::showMsgHandler(std::string str){
+    std::stringstream response;
+    response<<"HTTP/1.1 200 OK\r\n";
+    response<<conlen<<str.length();
+    response<<contype<<"text/html\r\n";
+    response<<"\r\n";
+    response<<str;
+    strToSocket(response.str(),msgfd);
+    return 0;
+}
+int RequestHandler::msgHandler(std::string str){
+    struct timeval tv;
+    std::vector<std::string>Lines;
+    Lines=getSubtoken(str,'=');
+    gettimeofday(&tv,NULL);
+    std::cerr<<tv.tv_sec<<"."<<tv.tv_usec<<'\n';
+    std::stringstream myStream;
+    myStream<<tv.tv_sec<<tv.tv_usec;
+    sqlite3 *db;
+    char buf[256]={0};
+    std::string pass_db;
+    int status=sqlite3_open("msgboard.db",&db);
+    char *err_msg=NULL;
+    if(!status){
+        std::cerr<<"Open Database Successfully\n";
+    }
+    else{
+        std::cerr<<"Failed to open database\n";
+        std::cerr<<sqlite3_errmsg(db)<<'\n';
+        return 1;
+    }    
+    if(strcmp(Lines[0].c_str(),"msg")==0){
+        const char* query = "INSERT INTO msgboard (time,msg) VALUES(?,?);";
+
+        sqlite3_stmt *stmt;
+        if(sqlite3_prepare_v2(db,query,-1,&stmt,NULL)!=SQLITE_OK){
+            std::cerr<<"Database Prepare Error\n";
+            std::cerr<<sqlite3_errmsg(db)<<'\n';
+            return 1;
+        }
+        std::string mytime = myStream.str();
+        sqlite3_bind_text(stmt,1,mytime.c_str(),mytime.length(),NULL);
+        sqlite3_bind_text(stmt,2,Lines[1].c_str(),Lines[1].length(),NULL);
+        if(sqlite3_step(stmt) == SQLITE_DONE){
+            sqlite3_finalize(stmt);
+            std::cerr<<"Message success\n";
+            return 0;
+        }
+        else{
+            std::cerr<<"Message Failed\n";
+            std::cerr<<sqlite3_errmsg(db)<<'\n';
+            sqlite3_finalize(stmt);
+            return 1;
+        }     
+    }
+    else if(strcmp(Lines[0].c_str(),"showmsg")==0){
+        const char* query = "SELECT msg FROM msgboard;";
+        std::stringstream retmsg;
+        sqlite3_stmt *stmt;
+        if(sqlite3_prepare_v2(db,query,-1,&stmt,NULL)!=SQLITE_OK){
+            std::cerr<<"Database Prepare Error\n";
+            std::cerr<<sqlite3_errmsg(db)<<'\n';
+            return 1;
+        }
+        if(sqlite3_step(stmt) == SQLITE_DONE){
+            std::cerr<<"Message doesn't exist\n";
+            return 1;
+        }
+        else{
+            int j=1;
+            retmsg<<"<!DOCTYPE HTML>";
+            retmsg<<"<html lang=\"en\">";
+            retmsg<<"<head>";
+            retmsg<<"<title>顯示留言板</title>";
+            retmsg<<"<meta charset=\"UTF-8\">";
+            retmsg<<"</head>";
+            retmsg<<"<body>";
+            while(sqlite3_step(stmt)==SQLITE_ROW){
+                retmsg<<"<p>"<<j<<" "<<curlEncoding(reinterpret_cast<const char*>(sqlite3_column_text(stmt,0)))<<"</p>";
+                j++;
+            };
+            retmsg<<"</body>";
+            retmsg<<"</html>";
+            showMsgHandler(retmsg.str());
+        }        
+    }
+    return 0;
 }
 
 int RequestHandler::LoginHandler(std::string str){
@@ -449,6 +555,10 @@ int RequestHandler::HTTPRequest(std::string incoming,int socketfd){
                     FILE_IO(socketfd);
                     FILE_C();                       
                 }
+            }
+            else if(TargetFile == "/msg_board.html"){
+                msgfd = socketfd;
+                status = msgHandler(Header[Header.size()-1]);
             }
 
             break;
