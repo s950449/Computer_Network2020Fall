@@ -7,7 +7,7 @@ Student ID: B07902125 Name:鄭昊昕
 ### a.
 No VC number can be assigned to the new VC. So this new VC cannot established in the network.
 ### b.
-Each link has two available VC numbers. There are four links, so we have 16 combinations. One example combination is (00,10,00,10)
+Each link has two available VC numbers. There are four links, so we have 16 combinations. One example combination is (10,00,00,10)
 ## Problem 3
 ### a.
 |Prefix Match| Link Interface |
