@@ -1,5 +1,5 @@
 CC=clang++
-CFLAGS=-Wall -std=c++17 -O2 -L/usr/lib -lmagic -lssl -lcrypto -lcurl -lsqlite3
+CFLAGS=-Wall -std=c++17 -O2 -L/usr/lib -lmagic -lssl -lcrypto -lcurl -lsqlite3 -DSQLITE_THREADSAFE=2
 REGEX=-DRegex
 DEBUG=-DDEBUG -g
 SSL=-DSSL_ENABLE

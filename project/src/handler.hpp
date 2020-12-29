@@ -29,10 +29,12 @@ class RequestHandler{
         const char* contype="Content-Type: ";
         char *files;
         SSL* ssl;
+        std::string html_msg(std::string str);
         std::vector<std::string> getSubtoken(std::string str,char dil);
         HTTPSpec::Method http_method;
         HTTPSpec::Version http_version;
         bool checkPath(std::string filepath);
+        bool checkLogin(std::string str);
         enum class FILE_TYPE{
             IMG_JPEG,TEXT_HTML,IMG_PNG,TEXT_PLAIN,TEXT_CSS,TEXT_JS,
         };
@@ -66,14 +68,58 @@ class RequestHandler{
         };
         int HTTPRequest(std::string incoming,int socketfd);
 };
+std::string RequestHandler::html_msg(std::string str){
+        std::cerr<<"Message success\n";
+        std::stringstream retmsg;
+        retmsg<<"<!DOCTYPE HTML>";
+        retmsg<<"<html lang=\"en\">";
+        retmsg<<"<head>";
+        retmsg<<"<title>"<<str<<"</title>";
+        retmsg<<"<meta charset=\"UTF-8\">";
+        retmsg<<"</head>";
+        retmsg<<"<body>";
+        retmsg<<"<h1>"<<str<<"</h1>";
+        retmsg<<"</body>";
+        retmsg<<"</html>";    
+        return retmsg.str();
+}
+bool RequestHandler::checkLogin(std::string str){
+    LoginSystem Test;
+    std::vector <std::string> Header;
+    std::vector<std::string> Lines;
+    Header = getSubtoken(str,'\n');
+    for(int i = 0;i<Header.size();i++){
+        if(Header[i].compare(0,7,"Cookie:") == 0){
+            Lines = getSubtoken(Header[i],';');
+            std::vector<std::string>tmpUser =getSubtoken(Lines[0],'=');
+            std::string username = tmpUser[1];            
+            std::vector<std::string>tmpID = getSubtoken(Lines[1],'=');
+            std::string sessionid = tmpID[1];
+            sessionid.erase(sessionid.length()-1,1);
+            std::cerr<<username<<" "<<sessionid<<"\n";
+            bool ret = Test.isLogin(username,sessionid);
+            return ret;
+        }
+    }
+    return false;
+}
 void RequestHandler::FILE_C(){
     myfile.close();
     return;
 }
 std::string RequestHandler::SetCookie(std::string username){
-    std::string ret("Set-Cookie: ");
-    ret+="username="+username;
-    return ret;
+    std::stringstream ret;
+    ret<<"Set-Cookie: ";
+    ret<<"username="<<username<<"\n";
+    ret<<"Set-Cookie: ";
+    struct timeval tv;
+    gettimeofday(&tv,NULL);
+    ret<<"sessionid="<<tv.tv_sec<<tv.tv_usec<<'\n';
+    std::stringstream sessionid;
+    sessionid<<tv.tv_sec<<tv.tv_usec;
+    LoginSystem login;
+    login.UpdateSession(username,sessionid.str());
+    return ret.str();
 }
 bool RequestHandler::checkPath(std::string filepath){
 #ifndef Regex
@@ -276,7 +322,7 @@ std::string RequestHandler::curlDecoding(std::string str){
 int RequestHandler::showMsgHandler(std::string str){
     std::stringstream response;
     response<<"HTTP/1.1 200 OK\r\n";
-    response<<conlen<<str.length();
+    response<<conlen<<str.length()<<'\n';
     response<<contype<<"text/html\r\n";
     response<<"\r\n";
     response<<str;
@@ -319,18 +365,8 @@ int RequestHandler::msgHandler(std::string str){
         if(sqlite3_step(stmt) == SQLITE_DONE){
             sqlite3_finalize(stmt);
             std::cerr<<"Message success\n";
-            std::stringstream retmsg;
-            retmsg<<"<!DOCTYPE HTML>";
-            retmsg<<"<html lang=\"en\">";
-            retmsg<<"<head>";
-            retmsg<<"<title>留言成功</title>";
-            retmsg<<"<meta charset=\"UTF-8\">";
-            retmsg<<"</head>";
-            retmsg<<"<body>";
-            retmsg<<"<h1>Success</h1>";
-            retmsg<<"</body>";
-            retmsg<<"</html>";
-            showMsgHandler(retmsg.str());            
+            std::string mymsg("留言成功\n");
+            showMsgHandler(html_msg(mymsg));            
             return 0;
         }
         else{
@@ -421,12 +457,12 @@ int RequestHandler::RegisterHandler(std::string str){
 
     std::cerr<<pw_hash<<" "<<pwr_hash<<'\n';
     if(pw != pwr){
-        return 3;
+        return WRONG_PASSWD;
     }
     LoginSystem Test;
     int status = Test.Register(username,pw);
     if(status == ACC_EXIST){
-        return 3;
+        return ACC_EXIST;
     }
     else if(status == 0){
         return 0;
@@ -490,6 +526,14 @@ int RequestHandler::HTTPRequest(std::string incoming,int socketfd){
 #endif
     switch(http_method){
         case HTTPSpec::Method::GET:
+            if(TargetFile=="/login.html" || TargetFile == "/register.html"){
+                if(checkLogin(incoming)){
+                    std::string is_login_msg = html_msg("Already Login\n");
+                    msgfd = socketfd;
+                    showMsgHandler(is_login_msg);
+                    break;
+                }
+            }
             std::cerr<<"GET "<<Lines[1]<<'\n';
             target_dir = ROOTDIR + Lines[1];
             std::cerr<<target_dir<<'\n';
@@ -550,11 +594,23 @@ int RequestHandler::HTTPRequest(std::string incoming,int socketfd){
             }
             else if(TargetFile == "/register.html"){
                 status=RegisterHandler(Header[Header.size()-1]);
-                if(status == 3 || status == 1){
+                if(status == WRONG_PASSWD){
                     //Password Repeat Error
-                    response+="HTTP/1.1 ";
-                    response+="403 Forbidden\r\n";
-                    strToSocket(response,socketfd);
+                    std::string tmp = html_msg("Wrong Password\n");
+                    msgfd = socketfd;
+                    showMsgHandler(tmp);
+                }
+                else if(status == ACC_EXIST){
+                    std::string tmp = html_msg("Account already existed\n");
+                    msgfd = socketfd;
+                    showMsgHandler(tmp);
+                    break;
+                }
+                else if(status == 1){
+                    std::string tmp = html_msg("Error\n");
+                    msgfd = socketfd;
+                    showMsgHandler(tmp);
+                    break;                    
                 }
                 else if(status == 0){
                     std::vector<std::string>tmp_user,tmp_str;
