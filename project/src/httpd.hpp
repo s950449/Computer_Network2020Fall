@@ -6,6 +6,8 @@
 #include <cstdlib>
 #include <netinet/in.h>
 #include <iostream>
+#include <thread>
+#include <mutex>
 #include "handler.hpp"
 #define SOCKET_FAILURE 7
 #define BIND_FAILURE 8
@@ -23,13 +25,16 @@ class HTTPD{
         fd_set client_set;
         struct sockaddr_in address;
         void continuousServer();
+        std::mutex g_lock;
     public:
         HTTPD(){
         };
         ~HTTPD(){
         }
         int http_init(int fd);
-
+        std::thread multi_http_init(int fd){
+            return std::thread(&HTTPD::http_init,this,fd);
+        };
 };
 
 void HTTPD::continuousServer(){
@@ -76,8 +81,10 @@ void HTTPD::continuousServer(){
                         }
                     }
                     else{
-                        char buf[BUFFERSIZE]={0};                       
+                        char buf[BUFFERSIZE]={0};  
+                        g_lock.lock();                     
                         int read_from_client=read(new_socket,buf,BUFFERSIZE);
+                        g_lock.unlock();
                         std::cerr<<"Read from client "<<read_from_client<<'\n';
                         if(read_from_client < 0){
                             continue;
@@ -87,8 +94,13 @@ void HTTPD::continuousServer(){
                         }
                         else{
                         std::string msg(buf);
+                        g_lock.lock();
+                        std::thread t1 = Incoming.multi_HTTPRequest(msg,new_socket);
+                        g_lock.unlock();
+                        t1.join();
 
-                        int status=Incoming.HTTPRequest(msg,new_socket);
+                        //int status;
+                        //status=Incoming.HTTPRequest(msg,new_socket);
 #ifdef DEBUG
                         std::cerr<<buf<<'\n';
 #endif

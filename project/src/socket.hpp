@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <netinet/in.h>
 #include <iostream>
+#include <thread>
 #include "https.hpp"
 #include "httpd.hpp"
 #define SOCKET_FAILURE 7
@@ -86,6 +87,8 @@ void SOCKETD::init_server(unsigned short port,SOCKETD::server type){
     setsockopt(server_fd,SOL_SOCKET,SO_SNDTIMEO | SO_RCVTIMEO,(char*)&tv,sizeof(struct timeval));
     HTTPD http_server;
     HTTPS https_server;
+    std::thread t1;
+    std::thread t2;
     switch(type){
         case server::HTTPS:
             https_server.init_key(pub,pri);
@@ -93,12 +96,19 @@ void SOCKETD::init_server(unsigned short port,SOCKETD::server type){
             break;
         case server::HTTP:
             std::cerr<<"http mode\n";
-            http_server.http_init(server_fd);
+            //http_server.http_init(server_fd);
+            t1 = http_server.multi_http_init(server_fd);
+            t2 = http_server.multi_http_init(server_fd);
+            t1.join();
+            t2.join();
             break;
         case server::OTHER:
         default:
             std::cerr<<"Default mode, using http\n";
-            http_server.http_init(server_fd);
+            t1 = http_server.multi_http_init(server_fd);
+            t2 = http_server.multi_http_init(server_fd);
+            t1.join();
+            t2.join();
 
     }
     return;

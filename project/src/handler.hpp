@@ -12,6 +12,7 @@
 #include "mysha.hpp"
 #include "login.hpp"
 #include <sys/time.h>
+#include <thread>
 #ifdef Regex
 #include <regex>
 #endif
@@ -65,6 +66,9 @@ class RequestHandler{
             workingdir+=working_dir_buf;
             workingdir+='/';
             workingdir+=ROOTDIR;
+        };
+        std::thread multi_HTTPRequest(std::string incoming,int socketfd){
+            return std::thread(&RequestHandler::HTTPRequest,this,incoming,socketfd);
         };
         int HTTPRequest(std::string incoming,int socketfd);
 };
