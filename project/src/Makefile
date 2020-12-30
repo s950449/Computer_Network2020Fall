@@ -11,7 +11,7 @@ server: server.o
 debug: server.o
 	$(CC) server.cpp $(CFLAGS) $(DEBUG) -o server.o
 testing: server.o
-	$(CC) server.cpp login.cpp  $(CFLAGS) $(REGEX) $(TESTING) -o server.o		
+	$(CC) server.cpp login.cpp https.cpp handler.cpp $(CFLAGS) $(REGEX) $(TESTING) -o server.o		
 ssl: server.o
 	$(CC) server.cpp  $(CFLAGS) $(REGEX) $(TESTING) $(SSL) -o server.o	
 clean:
