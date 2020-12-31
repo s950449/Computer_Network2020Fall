@@ -546,9 +546,8 @@ int RequestHandler::HTTPRequest(std::string incoming,int socketfd){
                     FILE_C();                    
                 }
                 else{
-                    response+="HTTP/1.1 ";
-                    response+="403 Forbidden\r\n";
-                    strToSocket(response,socketfd);                  
+                    response+=html_msg("Login failed, please check your password or contact admin\n");
+                    showMsgHandler(response);              
                 }
             }
             else if(TargetFile == "/register.html"){
