@@ -11,6 +11,7 @@
 #include <curl/curl.h>
 #include <sys/time.h>
 #include <thread>
+#include <openssl/ssl.h>
 #ifdef Regex
 #include <regex>
 #endif
@@ -21,6 +22,8 @@ extern char* rootdir;
 
 class RequestHandler{
     private:
+        bool https_mode;
+        SSL* ssl;
         std::string workingdir;
         int msgfd;
         int fd;
@@ -57,15 +60,22 @@ class RequestHandler{
         int showMsgHandler(std::string str);
         std::string SetCookie(std::string username);
     public:
+        bool setupSSL(SSL* inssl);
         RequestHandler(){
+            https_mode = false;
             char working_dir_buf[MAX_FILENAME]={0};
             getcwd(working_dir_buf,MAX_FILENAME);
             workingdir+=working_dir_buf;
             workingdir+='/';
             workingdir+=ROOTDIR;
         };
+        void clearSSL(){
+            https_mode = false;
+        }
         std::thread multi_HTTPRequest(std::string incoming,int socketfd){
             return std::thread(&RequestHandler::HTTPRequest,this,incoming,socketfd);
         };
         int HTTPRequest(std::string incoming,int socketfd);
+        std::string output;
+
 };

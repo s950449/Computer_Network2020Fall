@@ -2,6 +2,11 @@
 #include <iostream>
 #include <sstream>
 #include "login.hpp"
+bool RequestHandler::setupSSL(SSL* inssl){
+    ssl = inssl;
+    https_mode = true;
+    return true;
+}
 std::string RequestHandler::html_msg(std::string str){
         std::cerr<<"Message success\n";
         std::stringstream retmsg;
@@ -193,12 +198,22 @@ int RequestHandler::binToSocket(char* buf,int socketfd,int bufL){
             myfile.read(buf,bufL-cur);
             char tmp[bufL-cur];
             memcpy(tmp,buf,bufL-cur);
-            cnt+=write(socketfd,tmp,bufL-cur);
+            if(https_mode){
+                cnt+=SSL_write(ssl,tmp,bufL-cur);
+            }
+            else{
+                cnt+=write(socketfd,tmp,bufL-cur);
+            }
         }
         else{
             myfile.read(buf,BUFFERSIZE);
             //cnt+=write(socketfd,buf+cur,BUFFERSIZE);
-            cnt+=write(socketfd,buf,BUFFERSIZE);
+            if(https_mode){
+                cnt+=SSL_write(ssl,buf,BUFFERSIZE);
+            }
+            else{
+                cnt+=write(socketfd,buf,BUFFERSIZE);
+            }
         }
         cur+=BUFFERSIZE;
     }
@@ -218,10 +233,20 @@ int RequestHandler::strToSocket(std::string str,int socketfd){
     int cur = 0;
     while(cur<strL){
         if(strL-cur < BUFFERSIZE){
-            write(socketfd,writestr+cur,strL-cur);
+            if(https_mode){
+                SSL_write(ssl,writestr+cur,strL-cur);
+            }
+            else{
+                write(socketfd,writestr+cur,strL-cur);
+            }
         }
         else{
-            write(socketfd,writestr+cur,BUFFERSIZE);
+            if(https_mode){
+                SSL_write(ssl,writestr+cur,BUFFERSIZE);
+            }
+            else{
+                write(socketfd,writestr+cur,BUFFERSIZE);
+            }
         }
         cur+=BUFFERSIZE;
     }

@@ -111,31 +111,9 @@ std::string HTTPS::https_serve(int socketfd){
             int read_from_client=SSL_read(ssl,buf,BUFFERSIZE);           
             RequestHandler myHandler;
             std::string msg(buf);
-            int pipefd[2];
-            pipe(pipefd);
-            myHandler.HTTPRequest(msg,pipefd[1]);
-            close(pipefd[1]);
-            std::stringstream tmp;
-            while(read(pipefd[0],buf,BUFFERSIZE)>0){
-                tmp<<buf;
-                memset(buf,0,sizeof(buf));
-            }
-            close(pipefd[0]);
-            std::string retmsg = tmp.str();
-            int ret_size = retmsg.length();
-            char writestr[ret_size+1];
-            memset(writestr,0,sizeof(writestr));
-            strcpy(writestr,retmsg.c_str());
-            int cur = 0;
-            while(cur<ret_size){
-                if(ret_size-cur < BUFFERSIZE){
-                    SSL_write(ssl,writestr+cur,ret_size-cur);
-                }
-                else{
-                    SSL_write(ssl,writestr+cur,BUFFERSIZE);
-                }
-                cur+=BUFFERSIZE;
-            }
+            int fd = open("/dev/null",O_WRONLY);
+            myHandler.setupSSL(ssl);
+            myHandler.HTTPRequest(msg,fd);
         }
         SSL_shutdown(ssl);
         SSL_free(ssl);

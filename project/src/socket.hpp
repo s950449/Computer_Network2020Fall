@@ -91,6 +91,7 @@ void SOCKETD::init_server(unsigned short port,SOCKETD::server type){
     std::thread t2;
     switch(type){
         case server::HTTPS:
+            std::cerr<<"https mode\n";
             https_server.init_key(pub,pri);
             https_server.https_serve(server_fd);
             break;
