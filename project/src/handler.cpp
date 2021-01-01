@@ -480,11 +480,20 @@ int RequestHandler::HTTPRequest(std::string incoming,int socketfd){
     rootdir_test+="/"; 
     int file_length = -1; 
     int status=-1;
+    std::string ret_longurl;
 #ifdef VERBOSE
     std::cerr<<incoming<<'\n';
 #endif
     switch(http_method){
         case HTTPSpec::Method::GET:
+            if(getShorturl(TargetFile.substr(1,7),ret_longurl)){
+                std::stringstream tmp;
+                tmp<<"HTTP/1.1 302 Found\r\n";
+                tmp<<"Location: "<<curlEncoding(ret_longurl.c_str())<<"\r\n";
+                std::cerr<<tmp.str();
+                strToSocket(tmp.str(),socketfd);
+                break;
+            }
             if(TargetFile=="/login.html" || TargetFile == "/register.html"){
                 if(checkLogin(incoming)){
                     std::string is_login_msg = html_msg("Already Login\n");
@@ -495,7 +504,7 @@ int RequestHandler::HTTPRequest(std::string incoming,int socketfd){
             }
             std::cerr<<"GET "<<Lines[1]<<'\n';
             target_dir = ROOTDIR + Lines[1];
-            std::cerr<<target_dir<<'\n';
+            std::cerr<<target_dir<<'\n';           
             if(target_dir.compare(rootdir_test)==0){
                 target_dir = ROOTDIR + Lines[1] + "index.html";
             }
@@ -585,6 +594,20 @@ int RequestHandler::HTTPRequest(std::string incoming,int socketfd){
             else if(TargetFile == "/msg_board.html"){
                 msgfd = socketfd;
                 status = msgHandler(Header[Header.size()-1]);
+            }
+            else if(TargetFile == "/shorturl.html"){
+                std::vector<std::string> parseurl = getSubtoken(Header[Header.size()-1],'=');
+                std::string new_url;
+                if(parseurl[0].compare("msg")==0){
+                    new_url = shorturlGen(parseurl[1]);
+                    std::string ret("Your shorten url is: https://sim2.csie.org/");
+                    ret += curlEncoding(new_url.c_str());
+                    msgfd = socketfd;
+                    showMsgHandler(ret);
+                }
+                else{
+                    not_found();
+                }
             }
 
             break;

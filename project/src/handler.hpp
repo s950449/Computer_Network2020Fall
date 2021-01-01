@@ -22,6 +22,7 @@ extern char* rootdir;
 
 class RequestHandler{
     private:
+        std::string random_string();
         bool https_mode;
         SSL* ssl;
         std::string workingdir;
@@ -30,6 +31,8 @@ class RequestHandler{
         const char* conlen="Content-Length: ";
         const char* contype="Content-Type: ";
         char *files;
+        std::string shorturlGen(std::string longurl);
+        bool getShorturl(std::string shorturl,std::string& longurl);
         std::string html_msg(std::string str);
         std::vector<std::string> getSubtoken(std::string str,char dil);
         HTTPSpec::Method http_method;
