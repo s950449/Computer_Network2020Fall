@@ -10,7 +10,7 @@ server: server.o
 	$(CC) server.cpp $(CFLAGS) $(REGEX) -o server.o	
 debug: server.o
 	$(CC) server.cpp $(CFLAGS) $(DEBUG) -o server.o
-testing: server.o
+phase2: server.o
 	$(CC) server.cpp login.cpp https.cpp handler.cpp shorturl.cpp $(CFLAGS) $(REGEX) $(TESTING) -o server.o		
 ssl: server.o
 	$(CC) server.cpp  $(CFLAGS) $(REGEX) $(TESTING) $(SSL) -o server.o	
