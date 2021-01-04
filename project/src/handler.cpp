@@ -60,6 +60,13 @@ std::string RequestHandler::SetCookie(std::string username){
     login.UpdateSession(username,sessionid.str());
     return ret.str();
 }
+std::string RequestHandler::LogoutHandler(){
+    std::stringstream ret;
+    ret<<"Set-Cookie: ";
+    ret<<"username=none\n";
+    ret<<"Set-Cookie: sessionid=0\n";
+    return ret.str();
+}
 bool RequestHandler::checkPath(std::string filepath){
 #ifndef Regex
     std::cerr<<workingdir<<'\n';
@@ -400,6 +407,9 @@ int RequestHandler::RegisterHandler(std::string str){
     std::vector<std::string> tmp;
     tmp=getSubtoken(Lines[0],'=');
     std::string username = tmp[1];
+    if(username == "none"){
+        return 1;
+    }
     tmp=getSubtoken(Lines[1],'=');
     std::string pw = tmp[1];
     tmp=getSubtoken(Lines[2],'=');
@@ -492,6 +502,15 @@ int RequestHandler::HTTPRequest(std::string incoming,int socketfd){
                 tmp<<"Location: "<<curlEncoding(ret_longurl.c_str())<<"\r\n";
                 std::cerr<<tmp.str();
                 strToSocket(tmp.str(),socketfd);
+                break;
+            }
+            if(TargetFile == "/logout"){
+                std::string logout_header = LogoutHandler(); 
+                std::stringstream retmsg;
+                retmsg<<"HTTP/1.1 302 Found\r\n";
+                retmsg<<"Location:/index.html\r\n";
+                retmsg<<logout_header;
+                strToSocket(retmsg.str(),socketfd);
                 break;
             }
             if(TargetFile=="/login.html" || TargetFile == "/register.html"){
