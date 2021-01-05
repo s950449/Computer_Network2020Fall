@@ -62,7 +62,7 @@ class RequestHandler{
         int msgHandler(std::string str);
         int showMsgHandler(std::string str);
         std::string SetCookie(std::string username);
-        std::string LogoutHandler();
+        std::string LogoutHandler(std::string str);
     public:
         bool setupSSL(SSL* inssl);
         RequestHandler(){

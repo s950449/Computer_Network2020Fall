@@ -49,24 +49,50 @@ void RequestHandler::FILE_C(){
 std::string RequestHandler::SetCookie(std::string username){
     std::stringstream ret;
     ret<<"Set-Cookie: ";
-    ret<<"username="<<username<<"\n";
+    ret<<"username="<<username<<"; Secure\n";
     ret<<"Set-Cookie: ";
     struct timeval tv;
     gettimeofday(&tv,NULL);
-    ret<<"sessionid="<<tv.tv_sec<<tv.tv_usec<<'\n';
+    ret<<"sessionid="<<tv.tv_sec<<tv.tv_usec;
+    if(https_mode){
+        ret<<"; Secure";
+    }
+    ret<<'\n';
     std::stringstream sessionid;
     sessionid<<tv.tv_sec<<tv.tv_usec;
     LoginSystem login;
     login.UpdateSession(username,sessionid.str());
     return ret.str();
 }
-std::string RequestHandler::LogoutHandler(){
-    std::stringstream ret;
-    ret<<"Set-Cookie: ";
-    ret<<"username=none\n";
-    ret<<"Set-Cookie: sessionid=0\n";
-    return ret.str();
-}
+std::string RequestHandler::LogoutHandler(std::string str){
+    std::vector <std::string> Header;
+    std::vector<std::string> Lines;
+    Header = getSubtoken(str,'\n');
+    for(int i = 0;i<Header.size();i++){
+        if(Header[i].compare(0,7,"Cookie:") == 0){
+            Lines = getSubtoken(Header[i],';');
+            std::vector<std::string>tmpUser =getSubtoken(Lines[0],'=');
+            std::string username = tmpUser[1];            
+            std::vector<std::string>tmpID = getSubtoken(Lines[1],'=');
+            std::string sessionid = tmpID[1];
+            sessionid.erase(sessionid.length()-1,1);
+            std::stringstream ret;
+            ret<<"Set-Cookie: ";
+            ret<<"username="<<username<<"; Max-Age=0";
+            if(https_mode){
+                ret << "; Secure";
+            }
+            ret<<"\n";
+            ret<<"Set-Cookie: sessionid="<<sessionid<<"; Max-Age=0";
+            if(https_mode){
+                ret << "; Secure";
+            }
+            ret<<"\n";           
+            return ret.str();
+}            
+        }
+    }    
+
 bool RequestHandler::checkPath(std::string filepath){
 #ifndef Regex
     std::cerr<<workingdir<<'\n';
@@ -510,13 +536,15 @@ int RequestHandler::HTTPRequest(std::string incoming,int socketfd){
                 break;
             }
             if(TargetFile == "/logout"){
-                std::string logout_header = LogoutHandler(); 
+                if(checkLogin(incoming)){
+                std::string logout_header = LogoutHandler(incoming); 
                 std::stringstream retmsg;
                 retmsg<<"HTTP/1.1 302 Found\r\n";
                 retmsg<<"Location:/index.html\r\n";
                 retmsg<<logout_header;
                 strToSocket(retmsg.str(),socketfd);
                 break;
+                }
             }
             if(TargetFile=="/login.html" || TargetFile == "/register.html"){
                 if(checkLogin(incoming)){
