@@ -14,6 +14,8 @@ void HTTPS::https_init(){
     SSL_library_init();
     SSL_load_error_strings();	
     OpenSSL_add_ssl_algorithms();
+    ctx = https_create_context();
+    https_configure_context(ctx,pub,pri);    
     return;
 }
 void HTTPS::https_cleanup(){
@@ -88,9 +90,7 @@ int HTTPS::https_write(SSL* ssl,char* str,int length){
 }
 std::string HTTPS::https_serve(int socketfd){
     SSL* ssl;
-    https_init();
-    ctx = https_create_context();
-    https_configure_context(ctx,pub,pri);
+    std::cerr<<socketfd<<'\n';
     while(1){
         struct sockaddr_in addr;
         u_int32_t len = sizeof(addr);
@@ -116,8 +116,9 @@ std::string HTTPS::https_serve(int socketfd){
             int fd = open("/dev/null",O_WRONLY);
             myHandler.setupSSL(ssl);
             g_lock.lock();
-            myHandler.HTTPRequest(msg,fd);
+            std::thread t1 = myHandler.multi_HTTPRequest(msg,fd);
             g_lock.unlock();
+            t1.join();
         }
         SSL_shutdown(ssl);
         SSL_free(ssl);
