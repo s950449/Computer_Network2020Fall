@@ -325,6 +325,11 @@ int RequestHandler::msgHandler(std::string str){
             std::cerr<<sqlite3_errmsg(db)<<'\n';
             return 1;
         }
+        for(auto i = Lines[1].begin();i!= Lines[1].end();i++){
+            if(*i == '+'){
+                *i = ' ';
+            }
+        }        
         std::string mytime = myStream.str();
         sqlite3_bind_text(stmt,1,mytime.c_str(),mytime.length(),NULL);
         sqlite3_bind_text(stmt,2,Lines[1].c_str(),Lines[1].length(),NULL);
