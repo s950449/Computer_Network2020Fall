@@ -107,13 +107,17 @@ std::string HTTPS::https_serve(int socketfd){
             ERR_print_errors_fp(stderr);
         }
         else{
-            char buf[BUFFERSIZE]={0};                
-            int read_from_client=SSL_read(ssl,buf,BUFFERSIZE);           
+            char buf[BUFFERSIZE]={0};  
+            g_lock.lock();              
+            int read_from_client=SSL_read(ssl,buf,BUFFERSIZE);  
+            g_lock.unlock();         
             RequestHandler myHandler;
             std::string msg(buf);
             int fd = open("/dev/null",O_WRONLY);
             myHandler.setupSSL(ssl);
+            g_lock.lock();
             myHandler.HTTPRequest(msg,fd);
+            g_lock.unlock();
         }
         SSL_shutdown(ssl);
         SSL_free(ssl);

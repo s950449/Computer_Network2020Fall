@@ -89,11 +89,27 @@ void SOCKETD::init_server(unsigned short port,SOCKETD::server type){
     HTTPS https_server;
     std::thread t1;
     std::thread t2;
+    std::thread t3;
+    std::thread t4;
+    std::thread t5;
+    std::thread t6;        
     switch(type){
         case server::HTTPS:
             std::cerr<<"https mode\n";
             https_server.init_key(pub,pri);
             https_server.https_serve(server_fd);
+            t1 = https_server.multi_https_init(server_fd);
+            t2 = https_server.multi_https_init(server_fd);
+            t1.join();
+            t2.join();
+            t3 = https_server.multi_https_init(server_fd);
+            t4 = https_server.multi_https_init(server_fd);
+            t3.join();
+            t4.join();
+            t5 = https_server.multi_https_init(server_fd);
+            t6 = https_server.multi_https_init(server_fd);
+            t5.join();
+            t6.join();              
             break;
         case server::HTTP:
             std::cerr<<"http mode\n";
@@ -102,6 +118,14 @@ void SOCKETD::init_server(unsigned short port,SOCKETD::server type){
             t2 = http_server.multi_http_init(server_fd);
             t1.join();
             t2.join();
+            t3 = http_server.multi_http_init(server_fd);
+            t4 = http_server.multi_http_init(server_fd);
+            t3.join();
+            t4.join();
+            t5 = http_server.multi_http_init(server_fd);
+            t6 = http_server.multi_http_init(server_fd);
+            t5.join();
+            t6.join();                        
             break;
         case server::OTHER:
         default:
@@ -110,6 +134,15 @@ void SOCKETD::init_server(unsigned short port,SOCKETD::server type){
             t2 = http_server.multi_http_init(server_fd);
             t1.join();
             t2.join();
+            t3 = http_server.multi_http_init(server_fd);
+            t4 = http_server.multi_http_init(server_fd);
+            t3.join();
+            t4.join();
+            t5 = http_server.multi_http_init(server_fd);
+            t6 = http_server.multi_http_init(server_fd);
+            t5.join();
+            t6.join();  
+
 
     }
     return;
