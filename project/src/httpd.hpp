@@ -13,6 +13,7 @@
 #define ACCEPT_FAILURE 10
 #define SELECT_FAILURE 11
 #define READ_FAILURE 12
+
 const char* hello = "HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: 12\n\nHello world!";
 class HTTPD{
     private:
